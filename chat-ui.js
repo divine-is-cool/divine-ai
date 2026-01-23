@@ -1,4 +1,4 @@
-// UI helpers + sidebar tools (memory, import/share) + safer markdown rendering
+// UI helpers + settings tools (memory, import/share) + safer markdown rendering
 
 (function () {
   // Expose a small UI module to chat.js
