@@ -1,7 +1,8 @@
 // Divine AI - frontend-only implementation
 // Features: multi-chat sidebar, persistent chat titles, per-model limits, auto model switching,
 // floating notification bubbles, response copy button, full system prompts, export chat as Markdown,
-// PLUS: regenerate button, stop button, safer markdown, local memory, chat import/share JSON
+// PLUS: regenerate button, stop button, safer markdown, local memory, chat import/share JSON,
+// PLUS: per-message fake thumbs up/down, copy preserves formatting
 
 // --- API ---
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -18,21 +19,21 @@ const MODELS = {
     name: "Flex 1.0",
     limit: 25,
     systemPrompt:
-      "You are Divine AI, an independent AI assistant. You must ALWAYS refer to yourself as “Divine AI.” You must NEVER refer to yourself as ChatGPT, OpenAI, or any other AI name under any circumstances. You are helpful, accurate, and clear."
+      "You are Divine AI, an independent AI assistant. You must ALWAYS refer to yourself as “Divine AI.” You must NEVER refer to yourself as ChatGPT, OpenAI, or any other AI name under any circumstances. You must be helpful, direct, and safe."
   },
   comfort: {
     id: "openai/gpt-oss-20b",
     name: "Comfort 1.0",
     limit: 25,
     systemPrompt:
-      "You are Divine AI, running as Divine Comfort 1, a casual and friendly conversational AI designed primarily for chatting and companionship. You must ALWAYS refer to yourself as “Divine AI” (or “Divine Comfort”). Never mention any other AI brand. Be warm and supportive."
+      "You are Divine AI, running as Divine Comfort 1, a casual and friendly conversational AI designed primarily for chatting and companionship. You must ALWAYS refer to yourself as “Divine AI” (or “Divine Comfort”). Never mention ChatGPT or OpenAI. Be warm, casual, and supportive."
   },
   agent: {
     id: "openai/gpt-oss-20b",
     name: "Agent 1.0",
     limit: 25,
     systemPrompt:
-      "You are Divine AI, running as Divine Agent 1, a specialized AI focused on coding and programming tasks. You must ALWAYS refer to yourself as “Divine AI” (or “Divine Agent”). Never mention any other AI brand. Provide precise code-focused answers."
+      "You are Divine AI, running as Divine Agent 1, a specialized AI focused on coding and programming tasks. You must ALWAYS refer to yourself as “Divine AI” (or “Divine Agent”). Never mention ChatGPT or OpenAI. Be precise, practical, and code-focused."
   }
 };
 
@@ -52,6 +53,9 @@ let currentChatId = null;
 let currentAbortController = null;
 // Track last user message content for Regenerate
 let lastUserMessageForRegen = null;
+
+// Track which model produced the last assistant output (for regenerate)
+let lastAssistantModelKey = null;
 
 function genId() {
   return "c" + Math.random().toString(36).slice(2, 10) + Date.now();
@@ -186,7 +190,7 @@ function renderChatList() {
     deleteBtn.className = "chat-delete-btn";
     deleteBtn.title = "Delete chat";
     deleteBtn.innerHTML =
-      '<svg width="17" height="17" viewBox="0 0 24 24" style="vertical-align:middle;"><path d="M6 7v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"/><path d="M19 6H5"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+      '<svg width="17" height="17" viewBox="0 0 24 24" style="vertical-align:middle;" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"/><path d="M19 6H5"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
     deleteBtn.onclick = (e) => {
       e.stopPropagation();
       if (confirm("Delete this chat?")) {
@@ -260,9 +264,12 @@ function loadCurrentChat() {
   if (!chat) return;
 
   lastUserMessageForRegen = null;
+  lastAssistantModelKey = null;
 
   for (const msg of chat.messages.filter((m) => m.role !== "system")) {
     if (msg.role === "user") lastUserMessageForRegen = msg.content;
+    if (msg.role === "assistant") lastAssistantModelKey = msg.modelKey || chat.modelKey || null;
+
     appendMessage(msg.role === "assistant" ? "ai" : "user", msg.content);
   }
 
@@ -327,6 +334,79 @@ function showFloatingBubble(text) {
 }
 window.showFloatingBubble = showFloatingBubble;
 
+// --- Fake feedback (thumbs) ---
+function attachFakeFeedbackControls(messageDiv) {
+  const row = document.createElement("div");
+  row.className = "feedback-row";
+
+  const up = document.createElement("button");
+  up.type = "button";
+  up.className = "feedback-btn";
+  up.title = "Thumbs up";
+  up.innerHTML = `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M14 10V5.5a2.5 2.5 0 0 0-5 0V10"></path>
+      <path d="M9 10H6a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h3"></path>
+      <path d="M9 20h7a3 3 0 0 0 3-3v-5a2 2 0 0 0-2-2h-6"></path>
+    </svg>
+  `;
+
+  const down = document.createElement("button");
+  down.type = "button";
+  down.className = "feedback-btn";
+  down.title = "Thumbs down";
+  down.innerHTML = `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M10 14v4.5a2.5 2.5 0 0 0 5 0V14"></path>
+      <path d="M15 14h3a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-3"></path>
+      <path d="M15 4H8a3 3 0 0 0-3 3v5a2 2 0 0 0 2 2h6"></path>
+    </svg>
+  `;
+
+  up.onclick = (e) => {
+    e.stopPropagation();
+    const on = !up.classList.contains("on");
+    up.classList.toggle("on", on);
+    if (on) down.classList.remove("on");
+  };
+  down.onclick = (e) => {
+    e.stopPropagation();
+    const on = !down.classList.contains("on");
+    down.classList.toggle("on", on);
+    if (on) up.classList.remove("on");
+  };
+
+  row.appendChild(up);
+  row.appendChild(down);
+  messageDiv.appendChild(row);
+}
+
+// --- Copy helpers (preserve formatting) ---
+function copyMessageAsMarkdown(markdownText) {
+  const text = (markdownText || "").toString();
+
+  // Best effort: write both text/plain and text/markdown if supported
+  if (navigator.clipboard && window.ClipboardItem) {
+    const item = new ClipboardItem({
+      "text/plain": new Blob([text], { type: "text/plain" }),
+      "text/markdown": new Blob([text], { type: "text/markdown" })
+    });
+    return navigator.clipboard.write([item]);
+  }
+
+  // Fallback
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+
+  // Very old fallback
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand("copy");
+  document.body.removeChild(ta);
+  return Promise.resolve();
+}
+
 // --- Message rendering (safe markdown) + buttons ---
 function appendMessage(role, content) {
   const div = document.createElement("div");
@@ -339,23 +419,32 @@ function appendMessage(role, content) {
 
     div.innerHTML = `<div class="msg-head"><b>AI</b></div><div class="msg-content">${safeHtml}</div>`;
 
-    // Add copy button
+    // Add copy button (copies original markdown to preserve formatting)
     const copyBtn = document.createElement("button");
     copyBtn.className = "copy-btn";
-    copyBtn.title = "Copy response";
+    copyBtn.title = "Copy (Markdown)";
     copyBtn.innerHTML =
-      '<svg width="17" height="17" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2" stroke="currentColor" fill="none"/><rect x="3" y="3" width="13" height="13" rx="2" stroke-width="2" stroke="currentColor" fill="none"/></svg>';
-    copyBtn.onclick = (e) => {
-      const toCopy = div.querySelector(".msg-content")?.innerText || "";
-      navigator.clipboard.writeText(toCopy);
-      copyBtn.innerHTML = "&#10003;";
-      copyBtn.title = "Copied!";
-      setTimeout(() => {
-        copyBtn.innerHTML =
-          '<svg width="17" height="17" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2" stroke="currentColor" fill="none"/><rect x="3" y="3" width="13" height="13" rx="2" stroke-width="2" stroke="currentColor" fill="none"/></svg>';
-        copyBtn.title = "Copy response";
-      }, 1200);
+      '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+      '<rect x="9" y="9" width="13" height="13" rx="2"></rect>' +
+      '<rect x="3" y="3" width="13" height="13" rx="2"></rect>' +
+      "</svg>";
+    copyBtn.onclick = async (e) => {
       e.stopPropagation();
+      try {
+        await copyMessageAsMarkdown(content || "");
+        copyBtn.innerHTML = "&#10003;";
+        copyBtn.title = "Copied!";
+        setTimeout(() => {
+          copyBtn.innerHTML =
+            '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+            '<rect x="9" y="9" width="13" height="13" rx="2"></rect>' +
+            '<rect x="3" y="3" width="13" height="13" rx="2"></rect>' +
+            "</svg>";
+          copyBtn.title = "Copy (Markdown)";
+        }, 1200);
+      } catch (err) {
+        alert("Copy failed: " + err.message);
+      }
     };
     div.appendChild(copyBtn);
   } else {
@@ -363,6 +452,8 @@ function appendMessage(role, content) {
     div.innerHTML = `<div class="msg-head"><b>You</b></div><div class="msg-content plain"></div>`;
     div.querySelector(".msg-content").textContent = safeText;
   }
+
+  attachFakeFeedbackControls(div);
 
   chatArea.appendChild(div);
   window.DivineUI?.animateIn?.(div);
@@ -468,7 +559,17 @@ async function callModelAndAppendAssistant(chat, modelKeyUsedForLimitUI) {
     const aiMsg = data.choices?.[0]?.message?.content?.trim() || "No response.";
 
     removeLastThinkingPlaceholder();
-    chat.messages.push({ role: "assistant", content: aiMsg, timestamp: Date.now() });
+
+    // Persist which model produced the assistant message (for regenerate preference)
+    chat.messages.push({
+      role: "assistant",
+      content: aiMsg,
+      timestamp: Date.now(),
+      modelKey: chat.modelKey || modelKeyUsedForLimitUI || null
+    });
+
+    lastAssistantModelKey = chat.modelKey || modelKeyUsedForLimitUI || null;
+
     appendMessage("ai", aiMsg);
 
     incrementMessageCount();
@@ -576,14 +677,21 @@ async function regenerateLastResponse() {
   // Must have at least one user message
   if (!chat.messages.some((m) => m.role === "user")) return;
 
+  // Prefer the model that created the last assistant message (unless limit logic forces a switch)
+  let preferredModelKey = lastAssistantModelKey || chat.modelKey || "flex";
+  if (!MODELS[preferredModelKey]) preferredModelKey = chat.modelKey || "flex";
+
   // Remove last assistant message if present (so regen replaces it)
   for (let i = chat.messages.length - 1; i >= 0; i--) {
     if (chat.messages[i].role === "assistant") {
       chat.messages.splice(i, 1);
       break;
     }
-    // if last message(s) are not assistant, we still allow regen to continue
   }
+
+  // Temporarily set chat model to preferred for regen
+  chat.modelKey = preferredModelKey;
+  chat.modelId = MODELS[preferredModelKey]?.id || chat.modelId;
 
   // Re-render chat area
   loadCurrentChat();
@@ -685,7 +793,8 @@ window.exportCurrentChatAsObject = function () {
     messages: (chat.messages || []).map((m) => ({
       role: m.role,
       content: m.content,
-      timestamp: m.timestamp || null
+      timestamp: m.timestamp || null,
+      modelKey: m.modelKey || null
     }))
   };
 };
@@ -712,7 +821,8 @@ window.importChatFromObject = function (chatObj) {
     .map((m) => ({
       role: m.role,
       content: m.content,
-      timestamp: m.timestamp || null
+      timestamp: m.timestamp || null,
+      modelKey: m.modelKey || null
     }));
 
   allChats.unshift(imported);
