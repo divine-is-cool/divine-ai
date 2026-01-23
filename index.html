@@ -4,9 +4,10 @@
   <meta charset="utf-8" />
   <title>Divine AI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- favicon: use the provided image in the same folder -->
+
   <link rel="icon" href="divine-fav.png" type="image/png">
   <link rel="stylesheet" href="styles.css">
+
   <!-- Marked for Markdown rendering -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <!-- DOMPurify to sanitize HTML produced by marked -->
@@ -17,8 +18,14 @@
     <span class="topicon" title="Chats" id="chats-btn">
       <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="13" rx="3" /><path d="M8 18v1.5a1.5 1.5 0 0 0 2.25 1.3L14 18"/></svg>
     </span>
+
+    <div class="topbar-title">
+      <img src="divine-fav.png" alt="Divine" class="topbar-fav">
+      <span>Divine AI</span>
+    </div>
+
     <span class="topicon" title="Settings" id="settings-btn">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.02.02a2 2 0 0 1-2.83 2.83l-.02-.02A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1.82.33l-.02.02a2 2 0 0 1-2.83-2.83l.02-.02A1.7 1.7 0 0 0 8.6 15a1.7 1.7 0 0 0-.33-1.82l-.02-.02a2 2 0 0 1 2.83-2.83l.02.02A1.7 1.7 0 0 0 13 8.6a1.7 1.7 0 0 0 1.82-.33l.02-.02a2 2 0 0 1 2.83 2.83l-.02.02A1.7 1.7 0 0 0 19.4 15z"/></svg>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.02.02a2 2 0 0 1-2.83 2.83l-.02-.02A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1.82.33l-.02.02a2 2 0 0 1-2.83 0l-.02-.02A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.82-.33l-.02.02a2 2 0 0 1-2.83-2.83l.02-.02A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.33-1.82l-.02-.02a2 2 0 0 1 0-2.83l.02-.02A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.33-1.82l-.02-.02a2 2 0 0 1 2.83-2.83l.02.02A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.82-.33l.02-.02a2 2 0 0 1 2.83 0l.02.02A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.82.33l.02-.02a2 2 0 0 1 2.83 2.83l-.02.02A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 .33 1.82l.02.02a2 2 0 0 1 0 2.83l-.02.02A1.7 1.7 0 0 0 19.4 15z"/></svg>
     </span>
   </div>
 
@@ -28,15 +35,44 @@
   <div class="sidebar" id="chats-sidebar">
     <div class="sidebar-header">
       <div class="sidebar-title">
-        <!-- replaced emoji with provided image -->
         <img src="divine-fav.png" alt="Divine" class="sidebar-fav">
         Divine AI
       </div>
       <button class="sidebar-close" id="close-chats-sidebar">&times;</button>
     </div>
-    <div class="chat-list" id="chat-list">
-      <button class="chat-new-btn" id="new-chat-btn" title="New Chat">+</button>
-      <!-- Chat items injected here -->
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Memory</div>
+      <textarea id="memory-input" class="memory-input" placeholder="Store permanent facts or preferences here.&#10;Example:&#10;- Keep answers short&#10;- Call me Alex"></textarea>
+      <div class="sidebar-row">
+        <button class="mini-btn" id="memory-save-btn" type="button">Save</button>
+        <button class="mini-btn ghost" id="memory-clear-btn" type="button">Clear</button>
+      </div>
+      <div class="sidebar-hint">Saved locally on this device. Included in chats automatically.</div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Chats</div>
+      <div class="chat-list" id="chat-list">
+        <button class="chat-new-btn" id="new-chat-btn" title="New Chat">+</button>
+        <!-- Chat items injected here -->
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Import / Share</div>
+
+      <div class="sidebar-row">
+        <button class="mini-btn" id="import-chat-btn" type="button">Import JSON</button>
+        <input id="import-chat-file" type="file" accept="application/json" style="display:none;">
+      </div>
+
+      <div class="sidebar-row">
+        <button class="mini-btn" id="share-chat-btn" type="button">Share (JSON)</button>
+        <button class="mini-btn ghost" id="copy-share-json-btn" type="button">Copy JSON</button>
+      </div>
+
+      <div class="sidebar-hint">Share exports the current chat as a JSON file.</div>
     </div>
   </div>
 
@@ -45,6 +81,7 @@
     <div class="modal-content">
       <button class="close-btn" id="close-settings-btn">&times;</button>
       <h2 style="margin-bottom:24px;">Settings</h2>
+
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
         <label class="switch">
           <input type="checkbox" id="darkmode-toggle">
@@ -78,10 +115,21 @@
   <div class="inputbar-container">
     <form class="inputbar" onsubmit="event.preventDefault(); sendMessage();">
       <input type="text" id="user-input" placeholder="Talk to Divine..." autocomplete="off">
+
+      <button id="stop-btn" class="action-btn" title="Stop" type="button" style="display:none;">
+        Stop
+      </button>
+
       <button id="send-btn" title="Send" type="submit">&#9658;</button>
     </form>
+
+    <div class="belowbar">
+      <button id="regenerate-btn" class="action-pill" type="button" style="display:none;">Regenerate</button>
+    </div>
   </div>
 
+  <!-- split JS -->
+  <script src="chat-ui.js" defer></script>
   <script src="chat.js" defer></script>
 </body>
 </html>
