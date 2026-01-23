@@ -25,7 +25,7 @@
     </div>
 
     <span class="topicon" title="Settings" id="settings-btn">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.02.02a2 2 0 0 1-2.83 2.83l-.02-.02A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1.82.33l-.02.02a2 2 0 0 1-2.83 0l-.02-.02A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.82-.33l-.02.02a2 2 0 0 1-2.83-2.83l.02-.02A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.33-1.82l-.02-.02a2 2 0 0 1 0-2.83l.02-.02A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.33-1.82l-.02-.02a2 2 0 0 1 2.83-2.83l.02.02A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.82-.33l.02-.02a2 2 0 0 1 2.83 0l.02.02A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.82.33l.02-.02a2 2 0 0 1 2.83 2.83l-.02.02A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 .33 1.82l.02.02a2 2 0 0 1 0 2.83l-.02.02A1.7 1.7 0 0 0 19.4 15z"/></svg>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.02.02a2 2 0 0 1-2.83 2.83l-.02-.02A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1.82.33l-.02.02a2 2 0 0 [...]
     </span>
   </div>
 
@@ -42,37 +42,11 @@
     </div>
 
     <div class="sidebar-section">
-      <div class="sidebar-section-title">Memory</div>
-      <textarea id="memory-input" class="memory-input" placeholder="Store permanent facts or preferences here.&#10;Example:&#10;- Keep answers short&#10;- Call me Alex"></textarea>
-      <div class="sidebar-row">
-        <button class="mini-btn" id="memory-save-btn" type="button">Save</button>
-        <button class="mini-btn ghost" id="memory-clear-btn" type="button">Clear</button>
-      </div>
-      <div class="sidebar-hint">Saved locally on this device. Included in chats automatically.</div>
-    </div>
-
-    <div class="sidebar-section">
       <div class="sidebar-section-title">Chats</div>
       <div class="chat-list" id="chat-list">
         <button class="chat-new-btn" id="new-chat-btn" title="New Chat">+</button>
         <!-- Chat items injected here -->
       </div>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-section-title">Import / Share</div>
-
-      <div class="sidebar-row">
-        <button class="mini-btn" id="import-chat-btn" type="button">Import JSON</button>
-        <input id="import-chat-file" type="file" accept="application/json" style="display:none;">
-      </div>
-
-      <div class="sidebar-row">
-        <button class="mini-btn" id="share-chat-btn" type="button">Share (JSON)</button>
-        <button class="mini-btn ghost" id="copy-share-json-btn" type="button">Copy JSON</button>
-      </div>
-
-      <div class="sidebar-hint">Share exports the current chat as a JSON file.</div>
     </div>
   </div>
 
@@ -109,6 +83,33 @@
           <b>Agent 1.0:</b> Coding-focused assistant (primary focus: coding).
         </div>
       </div>
+
+      <!-- Moved Memory + Import/Share into Settings -->
+      <div style="margin-top: 28px; text-align:left;">
+        <div class="settings-section-title">Memory</div>
+        <textarea id="memory-input" class="memory-input" placeholder="Store permanent facts or preferences here.&#10;Example:&#10;- Keep answers short&#10;- Call me Alex"></textarea>
+        <div class="sidebar-row">
+          <button class="mini-btn" id="memory-save-btn" type="button">Save</button>
+          <button class="mini-btn ghost" id="memory-clear-btn" type="button">Clear</button>
+        </div>
+        <div class="sidebar-hint">Saved locally on this device. Included in chats automatically.</div>
+      </div>
+
+      <div style="margin-top: 22px; text-align:left;">
+        <div class="settings-section-title">Import / Share</div>
+
+        <div class="sidebar-row">
+          <button class="mini-btn" id="import-chat-btn" type="button">Import JSON</button>
+          <input id="import-chat-file" type="file" accept="application/json" style="display:none;">
+        </div>
+
+        <div class="sidebar-row">
+          <button class="mini-btn" id="share-chat-btn" type="button">Share (JSON)</button>
+          <button class="mini-btn ghost" id="copy-share-json-btn" type="button">Copy JSON</button>
+        </div>
+
+        <div class="sidebar-hint">Share exports the current chat as a JSON file.</div>
+      </div>
     </div>
   </div>
 
@@ -116,20 +117,27 @@
     <form class="inputbar" onsubmit="event.preventDefault(); sendMessage();">
       <input type="text" id="user-input" placeholder="Talk to Divine..." autocomplete="off">
 
-      <button id="stop-btn" class="action-btn" title="Stop" type="button" style="display:none;">
-        Stop
+      <button id="stop-btn" class="icon-btn" title="Stop" type="button" style="display:none;" aria-label="Stop">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="7" y="7" width="10" height="10" rx="2"></rect>
+        </svg>
       </button>
 
       <button id="send-btn" title="Send" type="submit">&#9658;</button>
     </form>
 
     <div class="belowbar">
-      <button id="regenerate-btn" class="action-pill" type="button" style="display:none;">Regenerate</button>
+      <button id="regenerate-btn" class="icon-pill" type="button" style="display:none;" title="Regenerate" aria-label="Regenerate">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-3.1-6.8"></path>
+          <path d="M21 4v6h-6"></path>
+        </svg>
+      </button>
     </div>
   </div>
 
   <!-- split JS -->
   <script src="chat-ui.js" defer></script>
   <script src="chat.js" defer></script>
-</body>
+ </body>
 </html>
